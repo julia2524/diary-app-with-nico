@@ -30,10 +30,10 @@ const BtnText = styled.Text`
   color: white;
 `;
 
-const Home = ({ navigation: { navigate } }) => (
+const Home = ({ navigation }: any) => (
   <Container>
     <Title>My journal</Title>
-    <Btn onPress={() => navigate("Write")}>
+    <Btn onPress={() => navigation.navigate("Write")}>
       <Ionicons name="add" size={40} color="white" />
     </Btn>
   </Container>
