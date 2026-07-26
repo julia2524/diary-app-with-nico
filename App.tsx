@@ -1,7 +1,7 @@
 import { NavigationContainer } from "@react-navigation/native";
 
 import Navigator from "./navigator";
-import React, { useEffect, useState } from "react";
+import React, { createContext, useEffect, useState } from "react";
 import * as SplashScreen from "expo-splash-screen";
 import * as SQLite from "expo-sqlite";
 
@@ -14,20 +14,23 @@ const createTableQuery = `
 `;
 
 SplashScreen.preventAutoHideAsync();
+const Context = React.createContext<SQLite.SQLiteDatabase | null>(null);
 export default function App() {
   const [ready, setReady] = useState(false);
+  const [db, setDB] = useState<SQLite.SQLiteDatabase | null>(null);
   useEffect(() => {
     async function startLoading() {
       try {
-        const db = await SQLite.openDatabaseAsync("nomadDiaryDB");
-
-        await db.execAsync(createTableQuery);
+        const connection = await SQLite.openDatabaseAsync("nomadDiaryDB");
+        await connection.execAsync(createTableQuery);
+        setDB(connection);
       } catch (error) {
         console.warn(error);
       } finally {
         setReady(true);
       }
     }
+    startLoading();
   });
   useEffect(() => {
     if (ready) {
@@ -38,8 +41,10 @@ export default function App() {
     return null;
   }
   return (
-    <NavigationContainer>
-      <Navigator />
-    </NavigationContainer>
+    <Context.Provider value={db}>
+      <NavigationContainer>
+        <Navigator />
+      </NavigationContainer>
+    </Context.Provider>
   );
 }
