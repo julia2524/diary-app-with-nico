@@ -1,7 +1,8 @@
 import styled from "styled-components/native";
 import colors from "../colors";
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Alert, FlatList } from "react-native";
+import { DBContext, useDB } from "../context";
 
 const Container = styled.View`
   background-color: ${colors.bgColor};
@@ -59,16 +60,39 @@ const EmotionText = styled.Text`
 `;
 const emotions = ["🤯", "🥲", "🤬", "🤗", "🥰", "😊", "🤩"];
 const Write = () => {
+  const db = useDB();
+  // useEffect(() => {
+  //   console.log(db);
+  // }, []);
   const [selectedEmotion, setEmotion] = useState<null | string>(null);
   const [feelings, setFeelings] = useState("");
   const onChangeText = (text: string) => setFeelings(text);
   const onEmotionPress = (face: string) => setEmotion(face);
-  const onSubmit = () => {
+  const onSubmit = async () => {
     if (feelings === "" || selectedEmotion === null) {
       return Alert.alert("Please complete form.");
     }
+    if (!db) {
+      console.log("DB 객체가 없습니다!");
+      return;
+    }
+    try {
+      console.log("저장 시도 중...", Date.now(), selectedEmotion, feelings);
+      const result = await db.runAsync(
+        `INSERT INTO feelings (id, emotion, message) VALUES (?, ?, ?)`,
+        Date.now(),
+        selectedEmotion,
+        feelings
+      );
+      console.log("저장 성공 결과:", result);
+    } catch (error) {
+      console.log("저장 오류:", error);
+    } finally {
+      setEmotion(null);
+      setFeelings("");
+    }
   };
-  console.log(feelings, selectedEmotion);
+  // console.log(feelings, selectedEmotion);
   return (
     <Container>
       <Title>How do you feel today?</Title>

@@ -1,9 +1,9 @@
 import { NavigationContainer } from "@react-navigation/native";
-
-import Navigator from "./navigator";
-import React, { createContext, useEffect, useState } from "react";
-import * as SplashScreen from "expo-splash-screen";
 import * as SQLite from "expo-sqlite";
+import Navigator from "./navigator";
+import React, { useEffect, useState } from "react";
+import * as SplashScreen from "expo-splash-screen";
+import { DBContext } from "./context";
 
 const createTableQuery = `
   CREATE TABLE IF NOT EXISTS feelings (
@@ -14,24 +14,26 @@ const createTableQuery = `
 `;
 
 SplashScreen.preventAutoHideAsync();
-const Context = React.createContext<SQLite.SQLiteDatabase | null>(null);
+
 export default function App() {
   const [ready, setReady] = useState(false);
   const [db, setDB] = useState<SQLite.SQLiteDatabase | null>(null);
   useEffect(() => {
-    async function startLoading() {
+    async function initDB() {
       try {
         const connection = await SQLite.openDatabaseAsync("nomadDiaryDB");
         await connection.execAsync(createTableQuery);
+
         setDB(connection);
+        console.log("DB 초기화 및 테이블 생성 완료!");
       } catch (error) {
-        console.warn(error);
+        console.warn("DB 초기화 실패:", error);
       } finally {
         setReady(true);
       }
     }
-    startLoading();
-  });
+    initDB();
+  }, []);
   useEffect(() => {
     if (ready) {
       SplashScreen.hideAsync();
@@ -41,10 +43,10 @@ export default function App() {
     return null;
   }
   return (
-    <Context.Provider value={db}>
+    <DBContext.Provider value={db}>
       <NavigationContainer>
         <Navigator />
       </NavigationContainer>
-    </Context.Provider>
+    </DBContext.Provider>
   );
 }
