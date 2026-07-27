@@ -3,7 +3,7 @@ import colors from "../colors";
 import { useContext, useEffect, useState } from "react";
 import { Alert, FlatList } from "react-native";
 import { DBContext, useDB } from "../context";
-
+import { useNavigation } from "@react-navigation/native";
 const Container = styled.View`
   background-color: ${colors.bgColor};
   flex: 1;
@@ -61,6 +61,7 @@ const EmotionText = styled.Text`
 const emotions = ["🤯", "🥲", "🤬", "🤗", "🥰", "😊", "🤩"];
 const Write = () => {
   const db = useDB();
+  const navigation = useNavigation();
   // useEffect(() => {
   //   console.log(db);
   // }, []);
@@ -78,13 +79,14 @@ const Write = () => {
     }
     try {
       console.log("저장 시도 중...", Date.now(), selectedEmotion, feelings);
-      const result = await db.runAsync(
+      await db.runAsync(
         `INSERT INTO feelings (id, emotion, message) VALUES (?, ?, ?)`,
         Date.now(),
         selectedEmotion,
         feelings
       );
-      console.log("저장 성공 결과:", result);
+      // console.log("저장 성공 결과:", result);
+      navigation.goBack();
     } catch (error) {
       console.log("저장 오류:", error);
     } finally {
