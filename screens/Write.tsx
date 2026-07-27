@@ -8,7 +8,10 @@ import {
   InterstitialAd,
   TestIds,
   AdEventType,
+  RewardedAd,
+  RewardedAdEventType,
 } from "react-native-google-mobile-ads";
+
 const Container = styled.View`
   background-color: ${colors.bgColor};
   flex: 1;
@@ -63,30 +66,50 @@ const Emotion = styled.TouchableOpacity<{ selected: boolean }>`
 const EmotionText = styled.Text`
   font-size: 24px;
 `;
+
+const AdBtn = styled.TouchableOpacity`
+  position: absolute;
+  bottom: 70px;
+  right: 30px;
+  height: 80px;
+  width: 80px;
+  border-radius: 40px;
+  justify-content: center;
+  align-items: center;
+  background-color: ${colors.btnColor};
+  elevation: 5;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.3);
+`;
+const AdBtnText = styled.Text`
+  color: white;
+`;
 const emotions = ["🤯", "🥲", "🤬", "🤗", "🥰", "😊", "🤩"];
 const adUnitId = __DEV__
   ? TestIds.INTERSTITIAL
   : "ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy";
 const interstitial = InterstitialAd.createForAdRequest(adUnitId);
+
+const rewarded = RewardedAd.createForAdRequest(adUnitId);
 const Write = () => {
   const db = useDB();
   const navigation = useNavigation();
 
   const [selectedEmotion, setEmotion] = useState<null | string>(null);
   const [feelings, setFeelings] = useState("");
-  const [loaded, setLoaded] = useState(false);
-
+  const [interstitialLoaded, setInterstitialLoaded] = useState(false);
+  const [rewardedLoaded, setRewardedLoaded] = useState(false);
+  //Interstitial Ads
   useEffect(() => {
     const unsubscribeLoaded = interstitial.addAdEventListener(
       AdEventType.LOADED,
       () => {
-        setLoaded(true);
+        setInterstitialLoaded(true);
       }
     );
     const unsubscribeClosed = interstitial.addAdEventListener(
       AdEventType.CLOSED,
       () => {
-        setLoaded(false);
+        setInterstitialLoaded(false);
         navigation.goBack();
         interstitial.load();
       }
@@ -94,6 +117,33 @@ const Write = () => {
     interstitial.load();
     return () => {
       unsubscribeLoaded();
+      unsubscribeClosed();
+    };
+  }, []);
+  //Rewarded AD
+  useEffect(() => {
+    const unsubscribeLoaded = rewarded.addAdEventListener(
+      RewardedAdEventType.LOADED,
+      () => {
+        setRewardedLoaded(true);
+      }
+    );
+    const unsubscribeEarned = rewarded.addAdEventListener(
+      RewardedAdEventType.EARNED_REWARD,
+      (reward) => console.log("User earned reward of ", reward)
+    );
+
+    const unsubscribeClosed = rewarded.addAdEventListener(
+      AdEventType.CLOSED,
+      () => {
+        setRewardedLoaded(false);
+        rewarded.load();
+      }
+    );
+    rewarded.load();
+    return () => {
+      unsubscribeLoaded();
+      unsubscribeEarned();
       unsubscribeClosed();
     };
   }, []);
@@ -115,7 +165,7 @@ const Write = () => {
         selectedEmotion,
         feelings
       );
-      if (loaded) {
+      if (interstitialLoaded) {
         interstitial.show();
       } else {
         navigation.goBack();
@@ -158,6 +208,21 @@ const Write = () => {
       <Btn onPress={onSubmit}>
         <BtnText>Save</BtnText>
       </Btn>
+      <AdBtn
+        onPress={() => {
+          if (rewardedLoaded) {
+            rewarded.show();
+          } else {
+            Alert.alert(
+              "광고가 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요!"
+            );
+          }
+        }}
+      >
+        <AdBtnText>
+          {rewardedLoaded ? "보상형 광고 보고 코인 받기 🎁" : "광고 로딩 중..."}
+        </AdBtnText>
+      </AdBtn>
     </Container>
   );
 };
