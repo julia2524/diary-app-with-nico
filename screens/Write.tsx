@@ -4,6 +4,11 @@ import { useContext, useEffect, useState } from "react";
 import { Alert, FlatList } from "react-native";
 import { DBContext, useDB } from "../context";
 import { useNavigation } from "@react-navigation/native";
+import {
+  InterstitialAd,
+  TestIds,
+  AdEventType,
+} from "react-native-google-mobile-ads";
 const Container = styled.View`
   background-color: ${colors.bgColor};
   flex: 1;
@@ -59,14 +64,39 @@ const EmotionText = styled.Text`
   font-size: 24px;
 `;
 const emotions = ["🤯", "🥲", "🤬", "🤗", "🥰", "😊", "🤩"];
+const adUnitId = __DEV__
+  ? TestIds.INTERSTITIAL
+  : "ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy";
+const interstitial = InterstitialAd.createForAdRequest(adUnitId);
 const Write = () => {
   const db = useDB();
   const navigation = useNavigation();
-  // useEffect(() => {
-  //   console.log(db);
-  // }, []);
+
   const [selectedEmotion, setEmotion] = useState<null | string>(null);
   const [feelings, setFeelings] = useState("");
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    const unsubscribeLoaded = interstitial.addAdEventListener(
+      AdEventType.LOADED,
+      () => {
+        setLoaded(true);
+      }
+    );
+    const unsubscribeClosed = interstitial.addAdEventListener(
+      AdEventType.CLOSED,
+      () => {
+        setLoaded(false);
+        navigation.goBack();
+        interstitial.load();
+      }
+    );
+    interstitial.load();
+    return () => {
+      unsubscribeLoaded();
+      unsubscribeClosed();
+    };
+  }, []);
   const onChangeText = (text: string) => setFeelings(text);
   const onEmotionPress = (face: string) => setEmotion(face);
   const onSubmit = async () => {
@@ -85,8 +115,12 @@ const Write = () => {
         selectedEmotion,
         feelings
       );
+      if (loaded) {
+        interstitial.show();
+      } else {
+        navigation.goBack();
+      }
       // console.log("저장 성공 결과:", result);
-      navigation.goBack();
     } catch (error) {
       console.log("저장 오류:", error);
     } finally {
