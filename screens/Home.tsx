@@ -4,7 +4,20 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { useDB } from "../context";
 import { useEffect, useState } from "react";
 import { useIsFocused } from "@react-navigation/native";
-import { FlatList, TouchableOpacity } from "react-native";
+import {
+  FlatList,
+  LayoutAnimation,
+  Platform,
+  TouchableOpacity,
+  UIManager,
+} from "react-native";
+import {
+  AppOpenAd,
+  TestIds,
+  AdEventType,
+  BannerAd,
+  BannerAdSize,
+} from "react-native-google-mobile-ads";
 
 const Container = styled.View`
   flex: 1;
@@ -14,13 +27,12 @@ const Container = styled.View`
 const Title = styled.Text`
   color: ${colors.textColor};
   font-size: 38px;
-  margin-bottom: 100px;
 `;
 
 const Btn = styled.TouchableOpacity`
   position: absolute;
-  bottom: 50px;
-  right: 50px;
+  bottom: 70px;
+  right: 30px;
   height: 80px;
   width: 80px;
   border-radius: 40px;
@@ -33,6 +45,9 @@ const Btn = styled.TouchableOpacity`
 
 const BtnText = styled.Text`
   color: white;
+`;
+const ListContainer = styled.View`
+  flex: 1;
 `;
 const Record = styled.View`
   background-color: ${colors.cardColor};
@@ -51,11 +66,27 @@ const Message = styled.Text`
 const Separator = styled.View`
   height: 10px;
 `;
+const BannerContainer = styled.View`
+  align-items: center;
+  width: 100%;
+  margin-bottom: 10px;
+`;
 interface Feeling {
   id: number;
   emotion: string;
   message: string;
 }
+
+if (
+  Platform.OS === "android" &&
+  UIManager.setLayoutAnimationEnabledExperimental
+) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+const adUnitId = __DEV__
+  ? TestIds.ADAPTIVE_BANNER
+  : "ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy";
 
 const Home = ({ navigation: { navigate } }: any) => {
   const db = useDB();
@@ -83,32 +114,50 @@ const Home = ({ navigation: { navigate } }: any) => {
   }, [isFocused, db]);
   const onDelete = async (id: number) => {
     if (!db) return;
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.spring);
+    setFeelings((prev) => prev.filter((feeling) => feeling.id !== id));
     try {
       await db.runAsync(`DELETE FROM feelings WHERE id = ?`, id);
       loadFeelings();
     } catch (error) {
       console.log("데이터 삭제 오류:", error);
+      loadFeelings();
     }
   };
   return (
     <Container>
-      <Title>My journal</Title>
-      <FlatList
-        data={feelings}
-        contentContainerStyle={{
-          paddingVertical: 10,
-        }}
-        ItemSeparatorComponent={Separator}
-        keyExtractor={(feeling) => String(feeling.id)}
-        renderItem={({ item }) => (
-          <TouchableOpacity onPress={() => onDelete(item.id)}>
-            <Record>
-              <Emotion>{item.emotion}</Emotion>
-              <Message>{item.message}</Message>
-            </Record>
-          </TouchableOpacity>
-        )}
-      />
+      <Title>오늘의 일기</Title>
+      <ListContainer>
+        <FlatList
+          data={feelings}
+          contentContainerStyle={{
+            paddingVertical: 10,
+          }}
+          ItemSeparatorComponent={Separator}
+          keyExtractor={(feeling) => String(feeling.id)}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              onPress={() => {
+                onDelete(item.id);
+              }}
+            >
+              <Record>
+                <Emotion>{item.emotion}</Emotion>
+                <Message>{item.message}</Message>
+              </Record>
+            </TouchableOpacity>
+          )}
+        />
+      </ListContainer>
+      <BannerContainer>
+        <BannerAd
+          unitId={adUnitId}
+          size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
+          requestOptions={{
+            requestNonPersonalizedAdsOnly: true,
+          }}
+        />
+      </BannerContainer>
       <Btn onPress={() => navigate("Write")}>
         <Ionicons name="add" size={40} color="white" />
       </Btn>
