@@ -1,6 +1,7 @@
 import styled from "styled-components/native";
 import colors from "../colors";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useDB } from "../context";
 import { useEffect, useState } from "react";
 import { useIsFocused } from "@react-navigation/native";
@@ -49,11 +50,17 @@ const BtnText = styled.Text`
 const ListContainer = styled.View`
   flex: 1;
 `;
-const Record = styled.View`
+const RecordContainer = styled.View`
   background-color: ${colors.cardColor};
   flex-direction: row;
   padding: 10px 20px;
   border-radius: 10px;
+
+  align-items: center;
+  justify-content: space-between;
+`;
+const Record = styled.View`
+  flex-direction: row;
   gap: 10px;
   align-items: center;
 `;
@@ -62,6 +69,11 @@ const Emotion = styled.Text`
 `;
 const Message = styled.Text`
   font-size: 18px;
+`;
+const Btns = styled.View`
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
 `;
 const Separator = styled.View`
   height: 10px;
@@ -124,6 +136,7 @@ const Home = ({ navigation: { navigate } }: any) => {
       loadFeelings();
     }
   };
+
   return (
     <Container>
       <Title>오늘의 일기</Title>
@@ -136,16 +149,32 @@ const Home = ({ navigation: { navigate } }: any) => {
           ItemSeparatorComponent={Separator}
           keyExtractor={(feeling) => String(feeling.id)}
           renderItem={({ item }) => (
-            <TouchableOpacity
-              onPress={() => {
-                onDelete(item.id);
-              }}
-            >
+            <RecordContainer>
               <Record>
                 <Emotion>{item.emotion}</Emotion>
                 <Message>{item.message}</Message>
               </Record>
-            </TouchableOpacity>
+              <Btns>
+                <TouchableOpacity
+                  onPress={() => {
+                    onDelete(item.id);
+                  }}
+                >
+                  <Ionicons name="trash" size={24} color="black" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    navigate("Write", {
+                      id: item.id,
+                      emotion: item.emotion,
+                      message: item.message,
+                    });
+                  }}
+                >
+                  <MaterialIcons name="edit" size={22} color="black" />
+                </TouchableOpacity>
+              </Btns>
+            </RecordContainer>
           )}
         />
       </ListContainer>

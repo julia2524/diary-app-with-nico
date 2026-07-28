@@ -3,7 +3,7 @@ import colors from "../colors";
 import { useContext, useEffect, useState } from "react";
 import { Alert, FlatList } from "react-native";
 import { DBContext, useDB } from "../context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import {
   InterstitialAd,
   TestIds,
@@ -84,18 +84,32 @@ const AdBtnText = styled.Text`
   color: white;
 `;
 const emotions = ["🤯", "🥲", "🤬", "🤗", "🥰", "😊", "🤩"];
-const adUnitId = __DEV__
+const adInterstitialUnitId = __DEV__
   ? TestIds.INTERSTITIAL
   : "ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy";
-const interstitial = InterstitialAd.createForAdRequest(adUnitId);
+const interstitial = InterstitialAd.createForAdRequest(adInterstitialUnitId);
 
-const rewarded = RewardedAd.createForAdRequest(adUnitId);
+const adRewardedUnitId = __DEV__
+  ? TestIds.REWARDED
+  : "ca-app-pub-xxxxxxxxxxxxx/yyyyyyyyyyyyyy";
+
+const rewarded = RewardedAd.createForAdRequest(adRewardedUnitId);
+
+type WriteParams = {
+  id?: number;
+  emotion?: string;
+  message?: string;
+};
 const Write = () => {
   const db = useDB();
   const navigation = useNavigation();
+  const route = useRoute();
+  const params = route.params as WriteParams | undefined;
 
-  const [selectedEmotion, setEmotion] = useState<null | string>(null);
-  const [feelings, setFeelings] = useState("");
+  const [selectedEmotion, setEmotion] = useState<null | string>(
+    params?.emotion ?? null
+  );
+  const [feelings, setFeelings] = useState(params?.message ?? "");
   const [interstitialLoaded, setInterstitialLoaded] = useState(false);
   const [rewardedLoaded, setRewardedLoaded] = useState(false);
   //Interstitial Ads
@@ -159,15 +173,27 @@ const Write = () => {
     }
     try {
       console.log("저장 시도 중...", Date.now(), selectedEmotion, feelings);
-      await db.runAsync(
-        `INSERT INTO feelings (id, emotion, message) VALUES (?, ?, ?)`,
-        Date.now(),
-        selectedEmotion,
-        feelings
-      );
+      if (params?.id) {
+        await db.runAsync(
+          `UPDATE feelings SET emotion = ?, message = ? WHERE id = ?`,
+          selectedEmotion,
+          feelings,
+          params.id
+        );
+      } else {
+        await db.runAsync(
+          `INSERT INTO feelings (id, emotion, message) VALUES (?, ?, ?)`,
+          Date.now(),
+          selectedEmotion,
+          feelings
+        );
+      }
+
       if (interstitialLoaded) {
+        console.log("전면 광고 실행!");
         interstitial.show();
       } else {
+        console.log("광고가 아직 로드되지 않아 바로 뒤로 갑니다.");
         navigation.goBack();
       }
       // console.log("저장 성공 결과:", result);
@@ -206,7 +232,7 @@ const Write = () => {
         placeholder="Write your feelings..."
       />
       <Btn onPress={onSubmit}>
-        <BtnText>Save</BtnText>
+        <BtnText>{params?.id ? "Complete" : "Save"}</BtnText>
       </Btn>
       <AdBtn
         onPress={() => {
